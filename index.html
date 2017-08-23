@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Snaking</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
+    <style>
+        .row .col-xs-1 {
+            height: 8.33vh;
+            text-align: center;
+            background-color: black;
+            line-height: 8.33vh;
+            font-size: 4vh;
+            color: #fff;
+        }
+        .score {
+            position: fixed;
+            top:2px;
+            right:2px;
+            width:4vw;
+            height:4vh;
+            color:white;
+            font-weight:bolder;
+            font-size:120%;
+            text-align:right;
+        }
+        .col-xs-1.o {
+            color: teal!important;
+        }
+        .col-xs-1.x {
+            color: mediumvioletred!important;
+        }
+        .bolder {
+            font-weight: bolder;
+        }
+        .cover {
+            width:100vw;
+            height:100vh;
+            line-height: 100vw;
+            text-align:center;
+            color:white;
+            font-weight:bolder;
+            position: fixed;
+            top:0;
+            left:0;
+            font-size: 5vw;
+        }
+        .cover2 {
+            width:100vw;
+            height:100vh;
+            line-height: 20vw;
+            text-align:center;
+            color:white;
+            font-weight:bolder;
+            position: fixed;
+            top:0;
+            left:0;
+            font-size: 5vw;
+        }
+    </style>
+</head>
+<body ng-app="app" ng-controller="main" ng-keyup="k($event)">
+    <div class="container-fluid">
+        <div class="row" ng-repeat="row in rows track by $index">
+            <div class="col-xs-1" ng-repeat="col in row track by $index" id="{{$parent.$index + '-' + $index}}" ng-class="{bolder:isGreat=='S'}">{{col}}</div>
+        </div>
+        <div class="score" ng-show="started && !ended">Perf : {{score/moves*100}}</div>
+    </div>
+    <div ng-hide="started" class="cover">Press any key to start...</div>
+    <div ng-show="ended" class="cover2">GAME OVER <br />Best perf : {{highest}}<br /><small>CTRL/CMD + R to restart</small></div>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/angular.min.js"></script>
+    <script>
+        angular.module('app', [])
+            .controller('main', function($scope, $interval, $timeout) {
+                $scope.score = 0;
+                $scope.moves = 0;
+                $scope.rows = [];
+                for(let row=0;row<12;row++) {
+                   $scope.rows[row] = [];
+                   for(let col = 0; col<12; col++) {
+                       $scope.rows[row][col] = ' ';
+                   }
+                }
+                $scope.snake = [0, 0];
+                $scope.direction = 'r';
+                $scope.isGreat = 's'
+                var letter = '→', timer = 150;
+                $scope.started = false;
+                $scope.ended = false;
+                $scope.highest = 0;
+                var thisIsAnAwesomeInterval;
+                $scope.go = function() {
+                    if(!$scope.started) {
+                        $scope.started = true;
+                        generateX();
+                        generateO();
+                        thisIsAnAwesomeInterval = $interval(function () {
+                            $scope.moves++;
+                            if ($scope.snake[1] === 11 && $scope.direction === 'r') {
+                                $scope.rows[$scope.snake[0]][$scope.snake[1]] = ' ';
+                                $scope.snake[1] = 0;
+                            } else if ($scope.snake[1] === 0 && $scope.direction === 'l') {
+                                $scope.rows[$scope.snake[0]][$scope.snake[1]] = ' ';
+                                $scope.snake[1] = 11;
+                            } else if ($scope.snake[0] === 11 && $scope.direction === 'd') {
+                                $scope.rows[$scope.snake[0]][$scope.snake[1]] = ' ';
+                                $scope.snake[0] = 0;
+                            } else if ($scope.snake[0] === 0 && $scope.direction === 'u') {
+                                $scope.rows[$scope.snake[0]][$scope.snake[1]] = ' ';
+                                $scope.snake[0] = 11;
+                            } else {
+                                $scope.rows[$scope.snake[0]][$scope.snake[1]] = ' ';
+                                $scope.snake[Number(!!($scope.direction === 'r' || $scope.direction === 'l'))] += !!($scope.direction === 'r' || $scope.direction === 'd') ? 1 : -1;
+                            }
+                            if ($scope.rows[$scope.snake[0]][$scope.snake[1]] === 'o') {
+                                $scope.score++;
+                                if ($scope.isGreat === 'S')
+                                    $scope.score++;
+                                $scope.isGreat = 'S';
+                                letter = '⚒';
+                                $timeout(setChar, 250);
+                                generateX();
+                                generateO();
+                            }
+                            if ($scope.rows[$scope.snake[0]][$scope.snake[1]] === 'x') {
+                                $scope.score--;
+                                if ($scope.isGreat === 'S')
+                                    $scope.score -= 5;
+                                $scope.isGreat = 'S';
+                                letter = '⚔';
+                                $timeout(setChar, 250);
+                                generateX();
+                            }
+                            $scope.rows[$scope.snake[0]][$scope.snake[1]] = letter;
+                            if($scope.highest < ($scope.score/$scope.moves*100)) {
+                                $scope.highest = ($scope.score/$scope.moves*100);
+                            }
+                            if($scope.score < 0) {
+                                $scope.ended = true;
+                                $interval.cancel(thisIsAnAwesomeInterval);
+                                for(let row=0;row<12;row++) {
+                                    $scope.rows[row] = [];
+                                    for(let col = 0; col<12; col++) {
+                                        $scope.rows[row][col] = ' ';
+                                    }
+                                }
+                            }
+                        }, timer);
+                    }
+                }
+                $scope.k = function(event) {
+                    if(!$scope.started) $scope.go();
+                    if(event.keyCode === 37) {
+                        $scope.direction = 'l';
+                        setChar();
+                    }
+                    if(event.keyCode === 39) {
+                        $scope.direction = 'r';
+                        setChar();
+                    }
+                    if(event.keyCode === 38) {
+                        $scope.direction = 'u';
+                        setChar();
+                    }
+                    if(event.keyCode === 40) {
+                        $scope.direction = 'd';
+                        setChar();
+                    }
+                    if(event.keyCode === 27) {
+                        $scope.ended = true;
+                        $interval.cancel(thisIsAnAwesomeInterval);
+                        for(let row=0;row<12;row++) {
+                            $scope.rows[row] = [];
+                            for(let col = 0; col<12; col++) {
+                                $scope.rows[row][col] = ' ';
+                            }
+                        }
+                    }
+                };
+                function setChar() {
+                    if($scope.direction === 'l') {
+                        letter = '←';
+                    }
+                    if($scope.direction === 'r') {
+                        letter = '→';
+                    }
+                    if($scope.direction === 'u') {
+                        letter = '↑';
+                    }
+                    if($scope.direction === 'd') {
+                        letter = '↓';
+                    }
+                }
+                function generateX() {
+                    angular.element($('.x')).removeClass('x');
+                    var howMany = Math.floor($scope.score/8) + 1;
+                    for(let row=0;row<12;row++) {
+                        for(let col = 0; col<12; col++) {
+                            if($scope.rows[row][col] === 'x') {
+                                angular.element($('#'+row+'-'+col)).addClass('x');
+                                howMany--;
+                            }
+                        }
+                    }
+                    for(let x = howMany; x>=0;x--) {
+                        let i = Math.floor(Math.random() * 11);
+                        let o = Math.floor(Math.random() * 11);
+                        angular.element($('#'+i+'-'+o)).addClass('x');
+                        $scope.rows[i][o] = 'x';
+                    }
+                }
+                function generateO() {
+                    let i = Math.floor(Math.random() * 11);
+                    let o = Math.floor(Math.random() * 11);
+                    while( angular.element($('#'+i+'-'+o)).hasClass('x')) {
+                        let i = Math.floor(Math.random() * 11);
+                        let o = Math.floor(Math.random() * 11);
+                    }
+                    $scope.rows[i][o] = 'o';
+                    angular.element($('.o')).removeClass('o');
+                    angular.element($('#'+i+'-'+o)).removeClass('x').addClass('o');
+                }
+
+            });
+    </script>
+</body>
+</html>

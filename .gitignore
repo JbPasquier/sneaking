@@ -1,0 +1,5 @@
+.idea
+node_modules
+*.lock
+*.iml
+.DS_Store
